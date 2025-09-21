@@ -28,27 +28,42 @@ func (P *Parser) skipWhitespace() {
 }
 
 func (P *Parser) parseObject() (any, error) {
+	P.skipWhitespace()
 	res := make(map[string]any)
+	if P.input[P.pos] != '{' {
+		return nil, fmt.Errorf("expcted { found at %d", P.pos)
+	}
 	P.pos++
-	var key string
-	var val any
-	var err error
-	for P.input[P.pos] != ':' {
-		key, err = P.parseString()
+
+	P.skipWhitespace()
+	for len(P.input) > P.pos && P.input[P.pos] != '}' {
+		P.skipWhitespace()
+		key, err := P.parseString()
+
 		if err != nil {
 			return nil, err
 		}
-	}
-	P.pos++
-	for P.input[P.pos] != '}' {
-		val, err = P.parseValue()
-		if err != nil {
-			return nil, err
+		P.skipWhitespace()
+		if len(P.input) <= P.pos {
+			break
 		}
-
+		if P.input[P.pos] == ':' {
+			P.pos++
+		}
+		P.skipWhitespace()
+		val, err := P.parseValue()
+		res[key] = val
+		P.skipWhitespace()
+		if P.input[P.pos] == ',' {
+			P.pos++
+		} else if P.input[P.pos] == '}' {
+			P.pos++
+			break
+		} else {
+			return nil, fmt.Errorf("expected , or } at pos %d", P.pos)
+		}
 	}
 
-	res[key] = val
 	return res, nil
 }
 
@@ -77,6 +92,10 @@ func (P *Parser) parseValue() (any, error) {
 }
 
 func (P *Parser) parseNull() (any, error) {
+	if P.pos >= len(P.input) {
+		return nil, nil
+	}
+	P.skipWhitespace()
 	if P.pos+3 >= len(P.input) || P.input[P.pos:P.pos+4] != "null" {
 		return nil, fmt.Errorf("expected null found some weird stuff only god knows")
 	}
@@ -86,10 +105,14 @@ func (P *Parser) parseNull() (any, error) {
 }
 
 func (P *Parser) parseArray() ([]any, error) {
+	if P.pos >= len(P.input) {
+		return nil, nil
+	}
 	var arr []any
 
 	P.pos++
-	for P.input[P.pos] != ']' {
+	for P.pos < len(P.input) && P.input[P.pos] != ']' {
+		P.skipWhitespace()
 		val, err := P.Parse()
 		if err != nil {
 			return nil, err
@@ -100,11 +123,21 @@ func (P *Parser) parseArray() ([]any, error) {
 			P.pos++
 		}
 	}
-
+	if P.input[P.pos] == ']' {
+		fmt.Println("yes")
+		P.pos++
+	}
 	return arr, nil
 }
 
 func (P *Parser) parseNumber() (any, error) {
+	if P.pos >= len(P.input) {
+		return nil, nil
+	}
+	if P.pos >= len(P.input) {
+		return nil, nil
+	}
+	P.skipWhitespace()
 	numStr := ""
 	for P.pos < len(P.input) && unicode.IsDigit(rune(P.input[P.pos])) {
 		numStr += string(P.input[P.pos])
@@ -118,15 +151,23 @@ func (P *Parser) parseNumber() (any, error) {
 }
 
 func (P *Parser) parseBoolean() (bool, error) {
+	if P.pos >= len(P.input) {
+		return false, nil
+	}
+	P.skipWhitespace()
 	if P.input[P.pos] == 't' {
-		P.pos++
+		P.pos += 4
 		return true, nil
 	}
-	P.pos++
+	P.pos += 5
 	return false, nil
 }
 
 func (P *Parser) parseString() (string, error) {
+	if P.pos >= len(P.input) {
+		return "", fmt.Errorf("unexpected eof")
+	}
+	P.skipWhitespace()
 	str := ""
 	P.pos++
 
@@ -135,13 +176,28 @@ func (P *Parser) parseString() (string, error) {
 		P.pos++
 	}
 	P.pos++
-
 	return str, nil
 }
 
 func main() {
-	inputs := []string{`[1,2,3,4,5]`, `{"meow":"meow2"}`, `323244`, "null"}
-
+	inputs := []string{
+		`{"aha":["meow","kehe"], "kaha":"yahan"}`,
+		`{"emptyArray":[], "emptyObj":{}}`,
+		`{"num":123, "bool":true, "nullVal":null}`,
+		`[1, 2, 3, 4, 5]`,
+		`["string", 42,  null, {"nested":"obj"}, [1,2]]`,
+		`[{"nested":"obj"}]`,
+		`"just a string"`,
+		`12345`,
+		`true`,
+		`false`,
+		`null`,
+		`{"nestedArr":[{"a":1},{"b":2}], "nestedObj":{"x":10,"y":20}}`,
+		`[]`,
+		`{}`,
+		`[[[[]]]]`,
+		`{"a":{"b":{"c":null}}}`,
+	}
 	for _, input := range inputs {
 		parser := NewParser(strings.TrimSpace(input))
 		res, err := parser.Parse()
@@ -150,6 +206,5 @@ func main() {
 			return
 		}
 		fmt.Println(res)
-
 	}
 }
