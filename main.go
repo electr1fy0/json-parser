@@ -154,7 +154,11 @@ func (P *Parser) parseNumber() (any, error) {
 
 	}
 	numStr := P.input[start:P.pos]
-	return strconv.ParseFloat(numStr, 64)
+	if strings.Contains(numStr, ".") {
+		return strconv.ParseFloat(numStr, 64)
+
+	}
+	return strconv.ParseInt(numStr, 10, 64)
 }
 
 func (P *Parser) parseBoolean() (bool, error) {
@@ -188,9 +192,9 @@ func (P *Parser) parseString() (string, error) {
 
 func main() {
 	inputs := []string{
-		`{"aha":["meow","kehe"], "kaha":"yahan"}`,
-		`{"emptyArray":[], "emptyObj":{}}`,
-		`{"num":123, "bool":true, "nullVal":null}`,
+		`{"aha":["meow","sleep"], "kaha":"yahan"}`,
+		`{"emptyArr":[], "emptyObj":{}}`,
+		`{"num":123, "bool":true, "nullVoid":null}`,
 		`[1, 2, 3, 4, 5]`,
 		`["string", -42.232,  null, {"nested":"obj"}, [1,2]]`,
 		`[{"nested":"obj"}]`,
