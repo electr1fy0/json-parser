@@ -93,7 +93,7 @@ func (P *Parser) parseValue() (any, error) {
 
 func (P *Parser) parseNull() (any, error) {
 	if P.pos >= len(P.input) {
-		return nil, nil
+		return nil, fmt.Errorf("unexpected eof")
 	}
 	P.skipWhitespace()
 	if P.pos+3 >= len(P.input) || P.input[P.pos:P.pos+4] != "null" {
@@ -106,7 +106,7 @@ func (P *Parser) parseNull() (any, error) {
 
 func (P *Parser) parseArray() ([]any, error) {
 	if P.pos >= len(P.input) {
-		return nil, nil
+		return nil, fmt.Errorf("unexpected eof")
 	}
 	var arr []any
 
@@ -124,35 +124,42 @@ func (P *Parser) parseArray() ([]any, error) {
 		}
 	}
 	if P.input[P.pos] == ']' {
-		fmt.Println("yes")
 		P.pos++
 	}
 	return arr, nil
 }
 
 func (P *Parser) parseNumber() (any, error) {
-	if P.pos >= len(P.input) {
-		return nil, nil
-	}
-	if P.pos >= len(P.input) {
-		return nil, nil
-	}
 	P.skipWhitespace()
-	numStr := ""
-	for P.pos < len(P.input) && unicode.IsDigit(rune(P.input[P.pos])) {
-		numStr += string(P.input[P.pos])
+	if P.pos >= len(P.input) {
+		return "", fmt.Errorf("unexpected eof")
+	}
+
+	start := P.pos
+	if P.input[P.pos] == '-' {
 		P.pos++
 	}
 
-	if numStr == "" {
-		return nil, fmt.Errorf("epected number at pos %d", P.pos)
+	for P.pos < len(P.input) && unicode.IsDigit(rune(P.input[P.pos])) {
+		P.pos++
 	}
-	return strconv.ParseInt(numStr, 10, 32)
+	if P.pos < len(P.input) && P.input[P.pos] == '.' {
+		P.pos++
+		if P.pos >= len(P.input) || !unicode.IsDigit(rune(P.input[P.pos])) {
+			return nil, fmt.Errorf("expected digits after '.' at pos %d", P.pos)
+		}
+		for P.pos < len(P.input) && unicode.IsDigit((rune(P.input[P.pos]))) {
+			P.pos++
+		}
+
+	}
+	numStr := P.input[start:P.pos]
+	return strconv.ParseFloat(numStr, 64)
 }
 
 func (P *Parser) parseBoolean() (bool, error) {
 	if P.pos >= len(P.input) {
-		return false, nil
+		return false, fmt.Errorf("unexpected eof")
 	}
 	P.skipWhitespace()
 	if P.input[P.pos] == 't' {
@@ -185,7 +192,7 @@ func main() {
 		`{"emptyArray":[], "emptyObj":{}}`,
 		`{"num":123, "bool":true, "nullVal":null}`,
 		`[1, 2, 3, 4, 5]`,
-		`["string", 42,  null, {"nested":"obj"}, [1,2]]`,
+		`["string", -42.232,  null, {"nested":"obj"}, [1,2]]`,
 		`[{"nested":"obj"}]`,
 		`"just a string"`,
 		`12345`,
