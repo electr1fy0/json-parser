@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"unicode"
@@ -190,8 +191,8 @@ func (P *Parser) parseString() (string, error) {
 	return str, nil
 }
 
-func main() {
-	inputs := []string{
+func getSampleInput() []string {
+	return []string{
 		`{"aha":["meow","sleep"], "kaha":"yahan"}`,
 		`{"emptyArr":[], "emptyObj":{}}`,
 		`{"num":123, "bool":true, "nullVoid":null}`,
@@ -209,6 +210,22 @@ func main() {
 		`[[[[]]]]`,
 		`{"a":{"b":{"c":null}}}`,
 	}
+}
+
+func getFileInput() (string, error) {
+	if len(os.Args) < 2 {
+		return "", fmt.Errorf("no arguments provided")
+	}
+	path := strings.Join(os.Args[1:], " ")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func testSampleInputs() {
+	inputs := getSampleInput()
 	for _, input := range inputs {
 		parser := NewParser(strings.TrimSpace(input))
 		res, err := parser.Parse()
@@ -218,4 +235,16 @@ func main() {
 		}
 		fmt.Println(res)
 	}
+}
+
+func main() {
+	input, _ := getFileInput()
+	parser := NewParser(strings.TrimSpace(input))
+	res, err := parser.Parse()
+	if err != nil {
+		fmt.Println("error parsing:", err)
+		return
+	}
+	fmt.Println(res)
+
 }
